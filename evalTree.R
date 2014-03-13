@@ -110,7 +110,7 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
       )
       grid.edit(id, gp=gpar(fill=fill), redraw = TRUE)
     }
-    if(class(node)=="NOT.node"){
+    if(class(node) %in% c("NOT.node", "AND.node", "STAR.node", "QUES.node", "PLUS.node")){
       fill<-switch(node$status,
                    U="steelblue",
                    C="yellow",
@@ -134,6 +134,11 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     for(kid.id in node$children){
       res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
       ok<-res.kid$ok
+      if(is.null(ok)){
+        cat("id=",id,"kid.id=",kid.id,"pos+consumed=",pos+consumed,"\n")
+        cat("id=",id,"kid.id=",kid.id,"consumed=",consumed,"\n")
+        cat("id=",id,"length(node$children)=",length(node$children),"pos=",pos,"\n")
+      }
       if(ok==T){
         consumed<-consumed + res.kid$consumed
       } else {
@@ -210,54 +215,127 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     res<-list(ok=ok,  consumed=consumed)    
   }
 
-
-   eval.not<-function(text, tree, id, pos){
-     node<-tree[[id]]
-     update.status( tree, id, 'C')
-     ok<-T
-     consumed<-0
-     for(kid.id in node$children){
-       res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
-       ok<-res.kid$ok
-       if(ok==T){
-         consumed<-consumed + res.kid$consumed
-       } else { #(ok=F)
-         #consumed<-0
-         break
-       }
-     }
-     ok<-!ok
-     status<-ifelse(ok, "OK","BAD")
-     update.status.children(tree, id, status)
-#      if(status=="BAD"){    
-#        for(kid.id in node$children){
-#          update.status(tree, kid.id, "BAD" )
+#    eval.not<-function(text, tree, id, pos){
+#      node<-tree[[id]]
+#      update.status( tree, id, 'C')
+#      ok<-T
+#      consumed<-0
+#      for(kid.id in node$children){
+#        res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
+#        ok<-res.kid$ok
+#        if(ok==T){
+#          consumed<-consumed + res.kid$consumed
+#        } else { #(ok=F)
+#          #consumed<-0
+#          break
 #        }
 #      }
-     res<-list(ok=ok,  consumed=0)     
-   }
+#      ok<-!ok
+#      status<-ifelse(ok, "OK","BAD")
+#      update.status.children(tree, id, status)
+#      res<-list(ok=ok,  consumed=0)     
+#    }
 
-#   eval.and<-<-function(text, tree.id){
-#     
-#   }
+  eval.ahead<-function(text, tree, id, pos){
+    node<-tree[[id]]
+    update.status( tree, id, 'C')
+    consumed<-0
+    for(kid.id in node$children){
+      res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
+      ok<-res.kid$ok
+      if(ok==T){
+        consumed<-consumed + res.kid$consumed
+      } else { #(ok=F)
+        return(FALSE)
+      }
+    }
+    TRUE
+  }
+
+  eval.and<-function(text, tree, id, pos){
+    ok<-eval.ahead(text, tree, id, pos)
+    status<-ifelse(ok, "OK","BAD")
+    update.status.children(tree, id, status)
+    res<-list(ok=ok,  consumed=0)         
+  }
+
+  eval.not<-function(text, tree, id, pos){
+    ok<-eval.ahead(text, tree, id, pos)
+    ok<-!ok
+    status<-ifelse(ok, "OK","BAD")
+    update.status.children(tree, id, status)
+    res<-list(ok=ok,  consumed=0)         
+  }
+
+  eval.star<-function(text, tree, id, pos){
+    node<-tree[[id]]
+    update.status( tree, id, 'C')
+    consumed<-0
+    kid.id=node$children[1]
+    more<-TRUE
+    while(more){
+      res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
+      more<-res.kid$ok
+      consumed<-consumed+res.kid$consumed
+    }
+    ok<-TRUE
+    status<- "OK"
+    update.status.children(tree, id, status)
+    res<-list(ok=ok,  consumed=consumed)         
+  }
+ 
+  eval.ques<-function(text, tree, id, pos){
+    node<-tree[[id]]
+    update.status( tree, id, 'C')
+    kid.id=node$children[1]
+    res.kid<-eval.tree(text, tree, kid.id, pos)
+    consumed<-res.kid$consumed
+    ok<-TRUE
+    status<- "OK"
+    update.status.children(tree, id, status)
+    res<-list(ok=ok,  consumed=consumed)         
+  }
+
+  eval.plus<-function(text, tree, id, pos){
+    node<-tree[[id]]
+    update.status( tree, id, 'C')
+    kid.id=node$children[1]
+    res.kid<-eval.tree(text, tree, kid.id, pos)
+    ok<-res.kid$ok
+    consumed<-res.kid$consumed
+    more<-ok
+    while(more){
+      res.kid<-eval.tree(text, tree, kid.id, pos+consumed )
+      more<-res.kid$ok
+      consumed<-consumed+res.kid$consumed
+    }
+    status<-ifelse(ok, "OK","BAD")
+    update.status.children(tree, id, status)
+    res<-list(ok=ok,  consumed=consumed)         
+  }
 
   node<-tree[[id]]
   type<-class(node)
- # cat("type=", type, "\n")
   switch(type,
     ATOM.node=eval.atom(text, tree, id, pos),    
     SEQ.node =eval.seq(text, tree, id, pos),
-    NOT.node=eval.not(text,tree,id,pos),
+    NOT.node=eval.not(text, tree, id,pos),
+    AND.node=eval.and(text, tree, id,pos),
+    STAR.node=eval.star(text, tree, id,pos),
+    PLUS.node=eval.plus(text, tree, id,pos),
+    QUES.node=eval.ques(text, tree, id,pos),
     OR.node  =eval.or(text, tree, id, pos)
     )
 }
 
 #value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
-value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
+#value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
+value(pegR[["GSEQ"]]("'c'? 'e'"))->res
+
 tree<-build.tree(res)
 drawPegTree(tree)
 
-eval.tree("cbcddd", tree)
+eval.tree("ceddd", tree)
 
 
 # IDENT.node

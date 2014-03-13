@@ -98,7 +98,7 @@ tree.builder<-function(l, row=1, col=1 , type="R"){
       children<-c(children, kid.id)
     }
     coord<-c(row=row, col=col, w=w+1, h=h)    
-    lres<-list(children=lkids, coord=coord)
+    lres<-list(children=children, coord=coord)
   }
   
   
@@ -203,3 +203,7 @@ root.id<-tree.builder(l)
 tree[["root.id"]]<-root.id
 tree
 }
+
+# value(pegR[["GSEQ"]](" 'd' 'c'*"))->res
+# 
+# tree<-build.tree(res)

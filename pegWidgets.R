@@ -167,8 +167,7 @@ g.IDENT<-function(node.id, tree){
     g.box1At(row,col,id, txt=node$val,  color="orange")
 }
 
-
-g.prefix<-function(node.id, txt, f1, f2, tree){
+g.xxxfix<-function(node.id, txt, f1, f2, pre, tree){
   node<-tree[[node.id]]
   row<-node$coord[["row"]]
   col<-node$coord[["col"]]
@@ -177,8 +176,26 @@ g.prefix<-function(node.id, txt, f1, f2, tree){
   id<-node.id
   bid<-paste0(node.id,"-b1")
   b1<-g.box2At(row, col, bid, w=w, h=1, , fill=f1)
-  c1<-g.circe1At(row, col, id, txt=txt,  fill=f2)
+  if(pre==TRUE){
+    c1<-g.circe1At(row, col, id, txt=txt,  fill=f2)
+  } else {
+    c1<-g.circe1At(row, col+w-1, id, txt=txt, fill=f2)
+  } 
   gTree(children=gList(b1,c1), id=id)   
+}
+
+g.prefix<-function(node.id, txt, f1, f2, tree){
+  g.xxxfix(node.id, txt, f1, f2, TRUE, tree)
+#   node<-tree[[node.id]]
+#   row<-node$coord[["row"]]
+#   col<-node$coord[["col"]]
+#   w<-node$coord[["w"]]
+#   h<-node$coord[["h"]]
+#   id<-node.id
+#   bid<-paste0(node.id,"-b1")
+#   b1<-g.box2At(row, col, bid, w=w, h=1, , fill=f1)
+#   c1<-g.circe1At(row, col, id, txt=txt,  fill=f2)
+#   gTree(children=gList(b1,c1), id=id)   
 }
 
 g.AND<-function(node.id, tree){
@@ -189,30 +206,30 @@ g.NOT<-function(node.id, tree){
   g.prefix(node.id, "!", "red", "hotpink", tree)
 }
 
-
-
-g.suffix<-function(node.id, txt, tree){
-  node<-tree[[node.id]]
-  row<-node$coord[["row"]]
-  col<-node$coord[["col"]]
-  w<-node$coord[["w"]]
-  h<-node$coord[["h"]]
-  id<-node$id   
-  b1<-box2At(row, col, id, w=w, h=1, , fill="green")
-  c1<-circe1At(row, col+w-1, id, txt=txt, fill="cyan")
-  gTree(children=gList(b1,c1), id=id) 
+g.suffix<-function(node.id, txt, f1, f2, tree){
+  g.xxxfix(node.id, txt, f1, f2, FALSE, tree)
+#   node<-tree[[node.id]]
+#   row<-node$coord[["row"]]
+#   col<-node$coord[["col"]]
+#   w<-node$coord[["w"]]
+#   h<-node$coord[["h"]]
+#   id<-node.id
+#   bid<-paste0(node.id,"-b1")  
+#   b1<-g.box2At(row, col, bid, w=w, h=1, , fill="green")
+#   c1<-g.circe1At(row, col+w-1, id, txt=txt, fill="cyan")
+#   gTree(children=gList(b1,c1), id=id) 
 }
 
 g.QUES<-function(node.id,tree){
-  g.suffix(node.id, "?", tree)
+  g.suffix(node.id, "?", "green", "cyan", tree)
 }
 
-drawSTAR<-function(node.id,tree){
-  g.suffix(node.id, "*", tree)
+g.STAR<-function(node.id,tree){
+  g.suffix(node.id, "*", "green", "cyan", tree)
 }
 
 g.PLUS<-function(node.id,tree){
-  g.suffix(node.id, "?", tree)
+  g.suffix(node.id, "?", "green", "cyan", tree)
 }
 
 #---------------------------stopped coding here  
@@ -414,6 +431,7 @@ drawPegTree<-function(tree, row=5, col=3){
 # value(pegR[["GSEQ"]]("  'k' / B " ))->res
 #value(pegR[["GSEQ"]]("  'k' / 'b' " ))->res
 
-#tree<-build.tree(res)
-#drawPegTree(tree)
+# value(pegR[["GSEQ"]]("  'k'* " ))->res
+# tree<-build.tree(res)
+# drawPegTree(tree)
 
