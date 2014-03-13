@@ -338,12 +338,3 @@ drawPegTree(tree)
 eval.tree("ceddd", tree)
 
 
-# IDENT.node
-# ATOM.node
-# SEQ.node
-# PLUS.node
-# STAR.node
-# QUES.node
-# AND.node
-# NOT.node
-# OR.node

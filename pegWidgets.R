@@ -126,21 +126,22 @@ g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="orange"){
 }
 
 g.drawGridCoord<-function(){
-  grid.rect(0,0,1,1, hjust=0, vjust=0, gp=gpar(fill="grey"))
+  grid.rect(0,0,1,1, hjust=0, vjust=0, gp=gpar(fill="wheat"))
   # draw grid for reference
   maxRow<-1/bHeight
   nmaxRow<- -maxRow
   maxCol<-1/bWidth
   nmaxCol<- - maxCol
+  color<-"wheat4"
   for(i in nmaxRow:maxRow ){
     y<-row2y(i) #+.2*bHeight
-    ln<-linesGrob(c(0,1), c(y,y))
+    ln<-linesGrob(c(0,1), c(y,y), gp=gpar(col=color))
     grid.draw(ln)  
   }
   for(j in nmaxCol:maxCol ){
     x<-col2x(j) #+.5*bWidth
-    ln<-linesGrob(c(x,x), c(0,1) )
-    grid.draw(ln)  
+    ln<-linesGrob(c(x,x), c(0,1) , gp=gpar(col=color) )
+    grid.draw(ln)
   }  
 }
 
@@ -405,7 +406,7 @@ prefix.move<-function(node){
 drawPegTree<-function(tree, row=5, col=3){
   plot.new()
   grid.newpage()
-  #g.drawGridCoord()
+  g.drawGridCoord()
   drawOR(tree)
   drawNOT(tree)
   drawAND(tree)
@@ -432,6 +433,4 @@ drawPegTree<-function(tree, row=5, col=3){
 #value(pegR[["GSEQ"]]("  'k' / 'b' " ))->res
 
 # value(pegR[["GSEQ"]]("  'k'* " ))->res
-# tree<-build.tree(res)
-# drawPegTree(tree)
-
+#
