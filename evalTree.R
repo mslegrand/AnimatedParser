@@ -345,6 +345,8 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
 test.eval.tree<-function(){
   source("textDisplayNoPak.R")
   
+  
+  
   value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
   #value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
   #value(pegR[["GSEQ"]]("'c'? 'e'"))->res

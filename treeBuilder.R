@@ -9,20 +9,20 @@ counter.new<-function(txt){
   inc
 }
 
-build.tree<-function(l){
+build.tree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
 
 tree<-new.env()
 
 
-id.new.GOR<-counter.new("GOR-")
-id.new.ATM<-counter.new("ATM-")
-id.new.R<-counter.new("R-")
-id.new.NOT<-counter.new("NOT-")
-id.new.AND<-counter.new("AND-")
-id.new.QUES<-counter.new("QUES-")
-id.new.STAR<-counter.new("STAR-")
-id.new.PLUS<-counter.new("PLUS-")
-id.new.CALL<-counter.new("CALL-")
+id.new.GOR<-  counter.new("GOR-")
+id.new.ATM<-  counter.new("ATM-")
+id.new.R<-    counter.new("R-")
+id.new.NOT<-  counter.new("NOT-")
+id.new.AND<-  counter.new("AND-")
+id.new.QUES<- counter.new("QUES-")
+id.new.STAR<- counter.new("STAR-")
+id.new.PLUS<- counter.new("PLUS-")
+id.new.CALL<- counter.new("CALL-")
 id.new.IDENT<-counter.new("IDENT-")
 
 #' tree.builder should look like

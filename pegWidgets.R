@@ -27,7 +27,8 @@ bOffSety<-0 #6*bHeight
 #bColOffset<-0
 #bRowOffset<-0
 
-offSetStack<-matrix(c(2,2,0,0),2,2)
+#offSetStack<-matrix(c(2,2,0,0),2,2)
+offSetStack<-matrix(c(0,0,0,0),2,2)
 
 col2x<- function(col){ bOffSetx +bWidth*(col + offSetStack[1,2] )}
 row2y<-function(row) { bOffSety + bHeight*(row + offSetStack[1,1])}
@@ -270,6 +271,7 @@ g.OR<-function(node.id, tree){
   }
   gt
 }
+
 #---------------DRAWS----------------------------------------
 
 drawAtoms<-function(tree){
