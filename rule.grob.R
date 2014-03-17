@@ -185,11 +185,21 @@ test.rule.grob<-function(){
  # source("parseExp.R")
   source("textDisplayNoPak.R")
   source("geomtree.R")
-  value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
   draw.new()
   #tree<-build.tree(res, "A")
-  geom.tree<-build.geomtree(res, rule.id="A")
-  rule.grob<-create.rule.grob("A", geom.tree)
+  #geom.tree<-build.geomtree(res, rule.id="A")
+  
+  forest<-new.geom.forest()
+  #rule.id<-paste0("A",id.new.rule.no())
+  #given rule id
+  rule.id<-"A"
+  #create parse expression
+  value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
+  #create rule instance inside forest
+  rule.instance.id<-add.geom.tree(forest, res, rule.id)
+  #create grob for this rule instance
+  rule.grob<-create.rule.grob(rule.instance.id, forest)
+  #draw the grob for this rule instance
   draw.rule.grob(rule.grob)
   #drawLower()
   

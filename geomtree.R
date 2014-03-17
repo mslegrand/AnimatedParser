@@ -9,21 +9,27 @@ counter.new<-function(txt){
   inc
 }
 
-build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
-  
-  tree<-new.env()
-  
-  
-  id.new.GOR<-  counter.new(paste0(rule.id,"-GOR-"))
-  id.new.ATM<-  counter.new(paste0(rule.id,"-ATM-"))
-  id.new.R<-    counter.new(paste0(rule.id,"-SEQ-"))
-  id.new.NOT<-  counter.new(paste0(rule.id,"-NOT-"))
-  id.new.AND<-  counter.new(paste0(rule.id,"-AND-"))
-  id.new.QUES<- counter.new(paste0(rule.id,"-QUES-"))
-  id.new.STAR<- counter.new(paste0(rule.id,"-STAR-"))
-  id.new.PLUS<- counter.new(paste0(rule.id,"-PLUS-"))
-  id.new.CALL<- counter.new(paste0(rule.id,"-CALL-"))
-  id.new.IDENT<-counter.new(paste0(rule.id,"-IDENT-"))
+id.new.rule.no<- counter.new("-")
+
+new.geom.forest<-function(){
+  forest<-new.env()
+  forest$.rule.no<-counter.new(paste0(rule.id,"-"))
+  forest
+}
+
+add.geom.tree<-function(forest, l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-") 
+  #tree<-new.env() 
+  rule.instance.id<-paste0(rule.id, forest$.rule.no() )
+  id.new.GOR<-  counter.new(paste0(rule.instance.id,"-GOR-"))
+  id.new.ATM<-  counter.new(paste0(rule.instance.id,"-ATM-"))
+  id.new.R<-    counter.new(paste0(rule.instance.id,"-SEQ-"))
+  id.new.NOT<-  counter.new(paste0(rule.instance.id,"-NOT-"))
+  id.new.AND<-  counter.new(paste0(rule.instance.id,"-AND-"))
+  id.new.QUES<- counter.new(paste0(rule.instance.id,"-QUES-"))
+  id.new.STAR<- counter.new(paste0(rule.instance.id,"-STAR-"))
+  id.new.PLUS<- counter.new(paste0(rule.instance.id,"-PLUS-"))
+  id.new.CALL<- counter.new(paste0(rule.instance.id,"-CALL-"))
+  id.new.IDENT<-counter.new(paste0(rule.instance.id,"-IDENT-"))
   
   #' tree.builder should look like
   #' node consists of val, coord, id (but node is a list)
@@ -36,7 +42,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       children<-c()
       for(R in l){
         tree.builder(R, row+h, col, type="R")->kid.id
-        kid.coord<-tree[[kid.id]]$coord
+        kid.coord<-forest[[kid.id]]$coord
         h<-h + kid.coord[['h']]
         w<-max(w, kid.coord[['w']])
         children<-c(children, kid.id)
@@ -45,7 +51,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-list(children=children, coord=coord, id=id, status="U" )
       #  cat("************************************************GORNODE id=",id,"\n")
       class(lres)<-"OR.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -57,7 +63,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
         type<-names(l)[i]
         ll<-l[[i]]
         tree.builder(ll, row, col+w, type=type)->kid.id
-        kid.coord<-tree[[kid.id]]$coord
+        kid.coord<-forest[[kid.id]]$coord
         h<-max(h,kid.coord[['h']])
         w<-w + kid.coord[['w']]
         children<-c(children, kid.id)
@@ -71,7 +77,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-tree.builderForward(l,row,col)
       lres$id<-id
       class(lres)<-"NOT.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -80,7 +86,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-tree.builderForward(l,row,col)    
       lres$id=id
       class(lres)<-"AND.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -93,7 +99,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
         ll<-l[[i]]
         tree.builder(ll, row, col+w, type=type)->kid.id
         #cat("tree.builderR: lres$coord=", lres$coord, "\n")
-        kid.coord<-tree[[kid.id]]$coord
+        kid.coord<-forest[[kid.id]]$coord
         h<-max(h,kid.coord[['h']])
         w<-w + kid.coord[['w']]
         children<-c(children, kid.id)
@@ -108,7 +114,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-tree.builderBackward(l,row,col)    
       lres$id=id
       class(lres)<-"QUES.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -117,7 +123,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-tree.builderBackward(l,row,col)    
       lres$id=id
       class(lres)<-"STAR.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -126,7 +132,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       lres<-tree.builderBackward(l,row,col)    
       lres$id=id
       class(lres)<-"PLUS.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -141,7 +147,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
         ll<-l[[i]]
         tree.builder(ll, row, col+w, type=type)->kid.id
         # cat("tree.builderR: lres$coord=", lres$coord, "\n")
-        kid.coord<-tree[[kid.id]]$coord
+        kid.coord<-forest[[kid.id]]$coord
         h<-max(h, kid.coord[['h']])
         w<- w + kid.coord[['w']]
         children<-c(children, kid.id)
@@ -151,7 +157,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       #class(coord)="coord"
       lres<-list(children=children, coord=coord, id=id, status="U" )
       class(lres)<-"SEQ.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     } 
     
@@ -161,7 +167,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       coord<-c(row=row, col=col, w=1, h=1)
       lres<-list(children=NULL, val=l, coord=coord, id=id, status="U" )
       class(lres)<-"ATOM.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -170,7 +176,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       coord<-c(row=row, col=col, w=1, h=1)
       lres<-list(children=NULL, val=l, coord=coord, id=id, status="U" )
       class(lres)<-"IDENT.node"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -180,7 +186,7 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
       stop("hit default")
       lres<-list(val=l, coord=coord, id=id, status="U" )
       class(lres)<-"Unkwn"
-      tree[[id]]<-lres
+      forest[[id]]<-lres
       id
     }
     
@@ -201,8 +207,10 @@ build.geomtree<-function(l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-")
   
   root.id<-tree.builder(l)
   #tree<-as.list(tree) #return as list?
-  tree[["root.id"]]<-root.id
-  tree
+  forest[[paste0(rule.instance.id,"-ROOT.ID")]]<-root.id
+  #forest[["root.id"]]<-root.id
+  #tree
+  rule.instance.id #rule instance id
 }
 
 # value(pegR[["GSEQ"]](" 'd' 'c'*"))->res
