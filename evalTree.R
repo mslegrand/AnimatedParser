@@ -143,13 +143,15 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
         consumed<-consumed + res.kid$consumed
       } else {
         consumed<-0
+        text.pos.back(pos)
         break
       }
     }
     status<-ifelse(ok, "OK","BAD")
     if(status=="BAD"){    
       for(kid.id in node$children){
-         update.status(tree, kid.id, "BAD" )
+        update.status.children(tree, kid.id, "BAD" )
+        #update.status(tree, kid.id, "BAD" )
       }
       step()
     }
@@ -164,9 +166,12 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     node<-tree[[id]]
     ok<-ifelse(node$val==substr(text,pos,pos-1+nchar(node$val)), T, F)
     status<-ifelse(ok, "OK", "BAD")  
-    consumed<-ifelse(ok, 1, 0)
+    consumed<-ifelse(ok, nchar(node$val), 0)
     #success :set color to green and redraw
     update.status(tree, id, status=status)
+    if(ok){
+      text.pos.right(consumed)
+    }
     res<-list(ok=ok,  consumed=consumed)
   }
 #---------------------
@@ -206,6 +211,7 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
         break
       } else { #ok==F
         if(length(node$children)==1){
+          text.pos.back(pos)
           break
         }
         node<-delete.first.child( node, tree )
@@ -256,6 +262,7 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     ok<-eval.ahead(text, tree, id, pos)
     status<-ifelse(ok, "OK","BAD")
     update.status.children(tree, id, status)
+    text.pos.back(pos)
     res<-list(ok=ok,  consumed=0)         
   }
 
@@ -264,6 +271,7 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     ok<-!ok
     status<-ifelse(ok, "OK","BAD")
     update.status.children(tree, id, status)
+    text.pos.back(pos)
     res<-list(ok=ok,  consumed=0)         
   }
 
@@ -328,13 +336,31 @@ eval.tree<-function(text, tree, id=tree$root.id, pos=1){ #, text, pos){
     )
 }
 
-#value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
-#value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
-value(pegR[["GSEQ"]]("'c'? 'e'"))->res
-
-tree<-build.tree(res)
-drawPegTree(tree)
-
-eval.tree("ceddd", tree)
 
 
+# update.consumed<-function(oldePos, newPos){
+#   
+# }
+
+test.eval.tree<-function(){
+  source("textDisplayNoPak.R")
+  
+  value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
+  #value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
+  #value(pegR[["GSEQ"]]("'c'? 'e'"))->res
+
+  draw.new()
+  tree<-build.tree(res)
+  drawPegTree(tree)
+  drawLower()
+  
+  #text.input<-"ceddd"
+  #text.input<-"cbddd"
+  text.input<-"cddd"
+  draw.TextPanel(text.input)
+  
+  eval.tree(text.input, tree)
+  
+}
+
+test.eval.tree()

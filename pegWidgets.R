@@ -24,10 +24,10 @@ bHeight=1/nRows
 bOffSetx<-0 #*bWidth 
 bOffSety<-0 #6*bHeight
 
-bColOffset<-0
-bRowOffset<-6
+#bColOffset<-0
+#bRowOffset<-0
 
-offSetStack<-matrix(c(6,6,0,0),2,2)
+offSetStack<-matrix(c(2,2,0,0),2,2)
 
 col2x<- function(col){ bOffSetx +bWidth*(col + offSetStack[1,2] )}
 row2y<-function(row) { bOffSety + bHeight*(row + offSetStack[1,1])}
@@ -84,6 +84,13 @@ g.box1At<-function(row, col, id, txt="b1", fill="steelblue", color="black"){ #us
   gTree(children=gList(rg,tg), name=id, gp=gpar(fill=fill, col=color), vp=vp1)  
 }
 
+g.boxR1At<-function(row, col, id, txt="b1", fill="steelblue", color="black"){ #used by call
+  vp1<-vp1At(row, col)
+  rg<-roundrectGrob(width=.8, height=.6, name="rg")
+  tg<-resizingTextGrob(txt)
+  gTree(children=gList(rg,tg), name=id, gp=gpar(fill=fill, col=color), vp=vp1)  
+}
+
 g.circe1At<-function(row, col, id, txt="t1", fill="greenyellow"){
 #   x<-col2x(col) + (.5)*bWidth
 #   y<-row2y(row) + (.5)*bHeight
@@ -126,13 +133,15 @@ g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="orange"){
 }
 
 g.drawGridCoord<-function(){
-  grid.rect(0,0,1,1, hjust=0, vjust=0, gp=gpar(fill="wheat"))
+  #grid.rect(0,0,1,1, hjust=0, vjust=0, gp=gpar(fill="wheat"))
+  grid.rect(0,0,1,1, hjust=0, vjust=0, gp=gpar(fill="cornsilk"))
   # draw grid for reference
   maxRow<-1/bHeight
   nmaxRow<- -maxRow
   maxCol<-1/bWidth
   nmaxCol<- - maxCol
-  color<-"wheat4"
+  #color<-"wheat4"
+  color<-"cornsilk3"
   for(i in nmaxRow:maxRow ){
     y<-row2y(i) #+.2*bHeight
     ln<-linesGrob(c(0,1), c(y,y), gp=gpar(col=color))
@@ -403,9 +412,10 @@ prefix.move<-function(node){
 
 #--Code to star drawing-----------------------
 
-drawPegTree<-function(tree, row=5, col=3){
-  plot.new()
-  grid.newpage()
+drawPegTree<-function(tree, row=2, col=3){
+#   plot.new()
+#   grid.newpage()
+  seekViewport("upper")
   g.drawGridCoord()
   drawOR(tree)
   drawNOT(tree)
@@ -414,23 +424,27 @@ drawPegTree<-function(tree, row=5, col=3){
   drawSTAR(tree)
   drawPLUS(tree)
   drawIdent(tree)
-  drawAtoms(tree)  
+  drawAtoms(tree) 
+  upViewport(0)
 }
 
+drawLower<-function(){
+  seekViewport("lower")
+  #grid.rect(x=.5, y=.5, width=1, height=1, gp=gpar(fill="khaki3") ) 
+  #grid.rect(x=.5, y=.5, width=1, height=1, gp=gpar(fill="cornflowerblue") ) 
+  grid.rect(x=.5, y=.5, width=1, height=1, gp=gpar(fill="lightblue3") ) 
+  #grid.rect(x=.5, y=.8, width=1, height=.3,  gp=gpar(fill="white") )
+  seekViewport("text")
+  #grid.rect(x=.5,y=.5, width=1, height=1, gp=gpar(fill="pink"))
+  upViewport(0)
+}
 
-#print("hi")
-#----test code---------
-#value(pegR[["GSEQ"]]("'x'/ 'y'"))->res
-#value(pegR[["GSEQ"]]('! x '))->res
-#value(pegR[["GSEQ"]]("'a' / ( 'b' ('e'/ 'c') ) 'd' 'd' (x/y) !('a' b / & 'c')'"))->res
+# text<-"hello there way, I hope it is all good!"
+# txt<-strsplit(text,"")[[1]]
+# txt<-paste(txt, collapse="       ")
+# # 
+# for(p in 1:nchar(txt)){
+#   drawTextIO(txt,p)->move.text
+#   Sys.sleep(.1)
+# }
 
-#value(pegR[["GSEQ"]]('!(a /! b)'))->res
-# value(pegR[["GSEQ"]]("  'k' / 'b' " ))->res
-# value(pegR[["GSEQ"]]("  A / B " ))->res
-# 
-# value(pegR[["GSEQ"]]("  K / 'b' " ))->res
-# value(pegR[["GSEQ"]]("  'k' / B " ))->res
-#value(pegR[["GSEQ"]]("  'k' / 'b' " ))->res
-
-# value(pegR[["GSEQ"]]("  'k'* " ))->res
-#

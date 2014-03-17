@@ -1,7 +1,4 @@
 
-build.tree<-function(l){
-
-tree<-new.env()
 
 counter.new<-function(txt){
   count<-0
@@ -11,6 +8,11 @@ counter.new<-function(txt){
   }
   inc
 }
+
+build.tree<-function(l){
+
+tree<-new.env()
+
 
 id.new.GOR<-counter.new("GOR-")
 id.new.ATM<-counter.new("ATM-")
@@ -22,7 +24,6 @@ id.new.STAR<-counter.new("STAR-")
 id.new.PLUS<-counter.new("PLUS-")
 id.new.CALL<-counter.new("CALL-")
 id.new.IDENT<-counter.new("IDENT-")
-
 
 #' tree.builder should look like
 #' node consists of val, coord, id (but node is a list)
