@@ -103,7 +103,7 @@ g.circe1At<-function(row, col, id, txt="t1", fill="greenyellow"){
   gTree(children=gList(rg,tg),name=id, gp=gpar(fill=fill), vp=vp1)  
 }
 
-g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="orange"){
+g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="yellow"){
   #id<-paste0(id,"-a")
   x1<- col2x(col) + (.5)*bWidth
   y1<- row2y(row) + (.5)*bHeight  #from
@@ -175,7 +175,7 @@ g.IDENT<-function(node.id, tree){
     row<-node$coord[["row"]]
     col<-node$coord[["col"]]
     id<- node$id
-    g.box1At(row,col,id, txt=node$val,  color="orange")
+    g.box1At(row,col,id, txt=node$val,  fill="powderblue")
 }
 
 g.xxxfix<-function(node.id, txt, f1, f2, pre, tree){

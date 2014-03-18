@@ -9,102 +9,94 @@ step<-function(){
   line <- readline() 
 }
 
-apply_rule<-function(ruleSet, root.rule, input.txt){
+
+apply_rule<-function(parsedRuleDefs, root.rule, text.input){
+ 
+  #begin helper functions
+  get.new.instance<-function(forest, rule.id){
+    res<-parsedRuleDefs[[rule.id]]  
+    instance.id<-add.geom.tree(forest , res, rule.id)
+    instance.id
+  }
+  #____________________________________________
   
-parsedRuleDefs<-list()
-
-  
-pardef<-function(parsedRuleDefs, rule.id, rule.def){
-  value(pegR[["GSEQ"]](rule.def))->parsed.rule.def
-  parsedRuleDefs[[rule.id]]<-parsed.rule.def
-  parsedRuleDefs
-}
-
-get.new.instance<-function(forest, rule.id){
-  res<-parsedRuleDefs[[rule.id]]  
-  instance.id<-add.geom.tree(forest , res, rule.id)
-  instance.id
-}
-#____________________________________________
-
-#used only by OR.node
-delete.first.child<-function(node, forest){
-  if(length(node$children>1)){
-    kids<-node$children
-    #get first kid
-    first.id<-kids[1]
-    f.kid<-forest[[first.id]]
-    fh<-f.kid$coord['h'] #how much the stack will decrease
-    h<-node$coord['h']
-    node$coord["h"]<-h-fh #height of the new stack
-    #delete the first row
-    rec.delete.nodes(first.id, forest)  #remove the first child    
-    node$children<-kids[-1] #take it off the childrens list
-    grid.remove(gPath(node$id, first.id))
-    for(kid.id in node$children){
-      vertical.move(kid.id, forest, -fh) 
+  #used only by OR.node
+  delete.first.child<-function(node, forest){
+    if(length(node$children>1)){
+      kids<-node$children
+      #get first kid
+      first.id<-kids[1]
+      f.kid<-forest[[first.id]]
+      fh<-f.kid$coord['h'] #how much the stack will decrease
+      h<-node$coord['h']
+      node$coord["h"]<-h-fh #height of the new stack
+      #delete the first row
+      rec.delete.nodes(first.id, forest)  #remove the first child    
+      node$children<-kids[-1] #take it off the childrens list
+      grid.remove(gPath(node$id, first.id))
+      for(kid.id in node$children){
+        vertical.move(kid.id, forest, -fh) 
+      }
+      forest[[node$id]]<-node #restore the forest
+      if(length(node$children)>1){
+        OR.move(node, forest)
+      } else {
+        grid.remove(node$id, redraw=TRUE)
+      }    
+      #be happy!!      
     }
-    forest[[node$id]]<-node #restore the forest
-    if(length(node$children)>1){
-      OR.move(node, forest)
-    } else {
-      grid.remove(node$id, redraw=TRUE)
+    node
+  }
+  
+  
+  vertical.move<-function(node.id, forest, d.rows){
+    node<-forest[[node.id]]
+    #do children
+    children<-node$children
+    if(!is.null(children)){
+      for(k.id in children){
+        vertical.move(k.id, forest, d.rows)
+      }
     }    
-    #be happy!!      
+    #do self
+    #1. decrement row coord
+    node$coord[["row"]]<-node$coord[["row"]] + d.rows
+    forest[[node.id]]<-node
+    #2. move viewport 
+    type<-class(node)
+    switch(type,
+           ATOM.node=ATOM.move(node),
+           IDENT.node=INDENT.move(node),
+           PLUS.node=suffix.move(node),
+           STAR.node=suffix.move(node),
+           QUES.node=suffix.move(node),
+           AND.node=prefix.move(node),
+           NOT.node=prefix.move(node),
+           OR.node=OR.move(node),
+           SEQ.node=TRUE      
+    )
   }
-  node
-}
-
-
-vertical.move<-function(node.id, forest, d.rows){
-  node<-forest[[node.id]]
-  #do children
-  children<-node$children
-  if(!is.null(children)){
-    for(k.id in children){
-      vertical.move(k.id, forest, d.rows)
+  
+  #removes this node and all children from both forest and display
+  rec.delete.nodes<-function(node.id, forest){ 
+    node<-forest[[node.id]]
+    children<-node$children
+    for( kid.id in children){
+      rec.delete.nodes(kid.id, forest)
     }
-  }    
-  #do self
-  #1. decrement row coord
-  node$coord[["row"]]<-node$coord[["row"]] + d.rows
-  forest[[node.id]]<-node
-  #2. move viewport 
-  type<-class(node)
-  switch(type,
-         ATOM.node=ATOM.move(node),
-         IDENT.node=INDENT.move(node),
-         PLUS.node=suffix.move(node),
-         STAR.node=suffix.move(node),
-         QUES.node=suffix.move(node),
-         AND.node=prefix.move(node),
-         NOT.node=prefix.move(node),
-         OR.node=OR.move(node),
-         SEQ.node=TRUE      
-  )
-}
-
-#removes this node and all children from both forest and display
-rec.delete.nodes<-function(node.id, forest){ 
-  node<-forest[[node.id]]
-  children<-node$children
-  for( kid.id in children){
-    rec.delete.nodes(kid.id, forest)
+    if(class(node) %in% c("ATOM.node", "IDENT.node","NOT.node","AND.node", "QUES.node", "STAR.node", "PLUS.node", "OR.node")
+    ){
+      grid.remove(node.id, redraw=TRUE)
+    }
+    rm(list=node.id, envir=forest)
   }
-  if(class(node) %in% c("ATOM.node", "IDENT.node","NOT.node","AND.node", "QUES.node", "STAR.node", "PLUS.node", "OR.node")
-  ){
-    grid.remove(node.id, redraw=TRUE)
-  }
-  rm(list=node.id, envir=forest)
-}
-
-
-
+  
 #----------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------
+# main helper function
 
-eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, pos){
+eval.forest<-function(text, forest, id=forest$root.id,  pos=1){      
   
   update.status.children<-function( forest,id,status=status){
     update.status( forest,id,status)
@@ -133,7 +125,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
                    OK="greenyellow",
                    BAD="red"
       )
-      grid.edit(id, gp=gpar(fill=fill), redraw = TRUE)
+      grid.edit(id, gp=gpar(fill=fill, col="black"), redraw = TRUE)
     }
     if(class(node) %in% c("NOT.node", "AND.node", "STAR.node", "QUES.node", "PLUS.node")){
       fill<-switch(node$status,
@@ -149,8 +141,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     }
     
   }
-  
-  
+    
   eval.seq<-function(text, forest, id, pos){
     #do each child
      node<-forest[[id]]
@@ -201,7 +192,6 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
   }
 #---------------------
 
-
   #used only by OR.node!!!!
   delete.remaining.chidren<-function(node, forest){
     kids<-node$children
@@ -245,27 +235,6 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     update.status( forest, id, status=status)
     res<-list(ok=ok,  consumed=consumed)    
   }
-
-#    eval.not<-function(text, forest, id, pos){
-#      node<-forest[[id]]
-#      update.status( forest, id, 'C')
-#      ok<-T
-#      consumed<-0
-#      for(kid.id in node$children){
-#        res.kid<-eval.forest(text, forest, kid.id, pos+consumed )
-#        ok<-res.kid$ok
-#        if(ok==T){
-#          consumed<-consumed + res.kid$consumed
-#        } else { #(ok=F)
-#          #consumed<-0
-#          break
-#        }
-#      }
-#      ok<-!ok
-#      status<-ifelse(ok, "OK","BAD")
-#      update.status.children( forest, id, status)
-#      res<-list(ok=ok,  consumed=0)     
-#    }
 
   eval.ahead<-function(text, forest, id, pos){
     node<-forest[[id]]
@@ -374,9 +343,6 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     ga<-g.arrow(dy+1, current.col, arrow.id,  len, txt=call.symbol)
     grid.draw(ga)
     # display call rule
-    #res<-eval.forest(text.input,  forest , call.instance.root.id) 
-    
-    #rule.grob<-create.rule.grob(call.instance.root.id, forest)
     rule.grob<-create.rule.grob(call.instance.id, forest)
     draw.rule.grob(rule.grob)
     #move it over
@@ -384,7 +350,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     # call the rule( i.e get it's root and eval it)
     # 
     step()
-    res.call<-eval.forest(text.input,  forest , call.instance.root.id)
+    res.call<-eval.forest(text.input,  forest , call.instance.root.id, pos)
     #update arrow status
     ok<-res.call$ok
     arrow.fill<-ifelse(ok, "greenyellow", "red")
@@ -392,12 +358,6 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     step()
     #remove call
     rec.delete.nodes(call.instance.root.id, forest)    
-    #move rule back
-    step()
-    #remove arrow 
-    grid.remove(gPath(arrow.id))
-    
-    move.rule.to(tr.name,0,0) #kludge for now
     # update call box.
     #ok<-res.call$ok
     consumed<-res.call$consumed
@@ -405,6 +365,13 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
     consumed<-ifelse(ok, nchar(node$val), 0)
     #success :set color to green and redraw
     update.status( forest, id, status=status)
+    #move rule back
+    
+    step()
+    #remove arrow 
+    grid.remove(gPath(arrow.id))
+    step()
+    move.rule.to(tr.name,0,0) #kludge for now       
     if(ok){
       text.pos.right(consumed)
     }
@@ -427,18 +394,14 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){       #, text, p
 }
 
 
-parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
-parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
-
 draw.new()
 forest<-new.geom.forest()
 drawLower()
-text.input<-"ab"
 draw.TextPanel(text.input) 
 seekViewport("upper")
 g.drawGridCoord()
 
-rule.id<-"A"
+rule.id<-root.rule
 rule.instance.id<-get.new.instance(forest, rule.id)
 
 #create grob for this rule instance
@@ -451,103 +414,20 @@ eval.forest(text.input,  forest , id)
 
 }
 
-#-------------------------------------------------------------------
-# update.consumed<-function(oldePos, newPos){
-#   
-# }
 
-test.eval.forest<-function(){
-  source("textDisplayNoPak.R")
-  
-  
-#   
-#   value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
-#   #value(pegR[["GSEQ"]]("'c'  ! 'a'  'b' "))->res
-#   #value(pegR[["GSEQ"]]("'c'? 'e'"))->res
-# 
-#   draw.new()
-#   forest<-build.tree(res)
-#   drawPegTree( forest)
-#   drawLower()
-#   
-#   #text.input<-"ceddd"
-#   #text.input<-"cbddd"
-#   text.input<-"cddd"
-#   draw.TextPanel(text.input)
-#   
-#   eval.forest(text.input, forest)
-  
-  #---------------------------
-  source("textDisplayNoPak.R")
-  source("geomtree.R")
-  source("rule.grob.R")
-
-#   parsedRuleDefs<-list()
-# 
-#   pardef<-function(parsedRuleDefs, rule.id, rule.def){
-#     value(pegR[["GSEQ"]](rule.def))->parsed.rule.def
-#     parsedRuleDefs[[rule.id]]<-parsed.rule.def
-#     parsedRuleDefs
-#   }
-# 
-#   get.new.instance<-function(forest, rule.id){
-#     res<-parsedRuleDefs[[rule.id]]  
-#     instance.id<-add.geom.tree(forest , res, rule.id)
-#     instance.id
-#   }
-
-#   push.call.stack(current.instance, curRow, curCol, current.node,){
-#     
-#     stack.item<-list(instance=current.instance,
-#                      row=current.Row,
-#                      col=current.Col
-#                      node=current.node)
-#   }
-#   
-#   pop.call.stack(){
-#     
-#   }
-
-#   rule.def<-" 'a' / 'b' / 'c' / 'd' 'd' "
-#   rule.id<-rule.id<-"A"
-#   value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->parsed.rule.def
-#   parsedRuleDefs[[rule.id]]<-parsed.rule.def
-
-#parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' / 'b' / 'c' / 'd' 'd' ")
-  parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
-  parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
-
-
-
-  draw.new()
-  forest<-new.geom.forest()
-
-  drawLower()
-   #text.input<-"cddd"
-  text.input<-"abb"
-  draw.TextPanel(text.input)  
-
-  #given rule id
-  #rule.id<-"A"
-  #create parse expression
-  #value(pegR[["GSEQ"]](" 'a' / 'b' / 'c' / 'd' 'd' "))->res
-  #res<-parsedRuleDefs[['A']]
-  #create rule instance inside forest
-  #rule.instance.id<-add.geom.tree(forest, res, rule.id)
-  rule.id<-"A"
-  rule.instance.id<-get.new.instance(forest, rule.id)
-  
-  #create grob for this rule instance
-  rule.grob<-create.rule.grob(rule.instance.id, forest)
-  # draw the grob for this rule instance
-  draw.rule.grob(rule.grob)
-
-  id<-instanceRoot(forest, rule.instance.id)
-  eval.forest(text.input,  forest , id) 
-
-
+pardef<-function(parsedRuleDefs, rule.id, rule.def){
+  value(pegR[["GSEQ"]](rule.def))->parsed.rule.def
+  parsedRuleDefs[[rule.id]]<-parsed.rule.def
+  parsedRuleDefs
 }
 
-#test.eval.forest()
+test.apply.rule<-function(){
+  parsedRuleDefs<-list()
+  parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
+  parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
+  text.input<-"abbb"
+  rule.id<-"A"
+  apply_rule(parsedRuleDefs, rule.id, text.input)  
+}
 
-apply_rule(1,2,3)
+test.apply.rule()
