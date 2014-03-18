@@ -9,17 +9,36 @@ counter.new<-function(txt){
   inc
 }
 
+instance.id.name.new<-function(){
+  count<-0
+  inc<-function(txt){
+    count<<-count+1
+    paste0(txt,"-",count)
+  }
+  inc
+}
+
 id.new.rule.no<- counter.new("-")
 
-new.geom.forest<-function(){
+instanceRoot<-function(forest, rule.instance.id){
+  id<-paste0(rule.instance.id,"-ROOT.ID") 
+  forest[[id]]
+}
+
+
+
+new.geom.forest<-function(rule.id){
   forest<-new.env()
-  forest$.rule.no<-counter.new(paste0(rule.id,"-"))
+  forest$.new.instance.id.name<-instance.id.name.new()
+  
+  
+  
   forest
 }
 
 add.geom.tree<-function(forest, l, rule.id=""){ # "GOR-"=>paste0(rule.id,"_GOR-") 
   #tree<-new.env() 
-  rule.instance.id<-paste0(rule.id, forest$.rule.no() )
+  rule.instance.id<- forest$.new.instance.id.name(rule.id) 
   id.new.GOR<-  counter.new(paste0(rule.instance.id,"-GOR-"))
   id.new.ATM<-  counter.new(paste0(rule.instance.id,"-ATM-"))
   id.new.R<-    counter.new(paste0(rule.instance.id,"-SEQ-"))

@@ -169,7 +169,7 @@ create.rule.grob<-function(rule.id, geom.tree, row=0, col=0){
 
 draw.rule.grob<-function(rule.grob, row=0, col=0){
   seekViewport("upper")
-  g.drawGridCoord()
+  #g.drawGridCoord()
   grid.draw(rule.grob)
 }
 
@@ -205,5 +205,5 @@ test.rule.grob<-function(){
   
 }
 
-test.rule.grob()
+#test.rule.grob()
 

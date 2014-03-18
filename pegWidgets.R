@@ -104,7 +104,7 @@ g.circe1At<-function(row, col, id, txt="t1", fill="greenyellow"){
 }
 
 g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="orange"){
-  id<-paste0(id,"-a")
+  #id<-paste0(id,"-a")
   x1<- col2x(col) + (.5)*bWidth
   y1<- row2y(row) + (.5)*bHeight  #from
   y2<- y1 -bHeight*len #row2y(row+len) #to
@@ -130,7 +130,7 @@ g.arrow<-function(row, col, id,  len, txt="a<-'b'", fill="orange"){
   tg<-resizingTextGrob(txt, x=.5, y=len+.5)
   
   pg<-polygonGrob(x,y)
-  gTree(children=gList(pg,tg),   gp=gpar(fill=fill), vp=vp1)  
+  gTree(children=gList(pg,tg), name=id,  gp=gpar(fill=fill), vp=vp1)  
 }
 
 g.drawGridCoord<-function(){
