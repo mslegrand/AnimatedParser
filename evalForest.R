@@ -16,6 +16,7 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
   get.new.instance<-function(forest, rule.id){
     res<-parsedRuleDefs[[rule.id]]  
     instance.id<-add.geom.tree(forest , res, rule.id)
+    cat("instance.id=", instance.id, "\n")
     instance.id
   }
   #____________________________________________
@@ -90,6 +91,27 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
     }
     rm(list=node.id, envir=forest)
   }
+  
+  instance.offset.stack<-data.frame()
+  
+  push.instance<-function(instance.id, row, col){
+    instance.offset.stack<<-rbind(data.frame(iid=instance.id, row=row, col=col), instance.offset.stack)
+  }
+  pop.instance<-function(){
+    item<-instance.offset.stack[1,]
+    instance.offset.stack<<-instance.offset.stack[-1,]
+    item
+  }
+  
+  update.instance.offset.stack<-function(){
+    for(i in 1:nrow(instance.offset.stack)){
+      id<-as.character(instance.offset.stack[i,1])
+      row<-instance.offset.stack[i,2]
+      col<-instance.offset.stack[i,3]
+      move.rule.to(id, row, col)
+    }
+  }
+  
   
 #----------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------
@@ -180,7 +202,8 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     step()
     #answer phase
     node<-forest[[id]]
-    ok<-ifelse(node$val==substr(text,pos,pos-1+nchar(node$val)), T, F)
+    len<-nchar(node$val)
+    ok<-ifelse( (len==0) | (node$val==substr(text,pos,pos-1+len) ), T, F)
     status<-ifelse(ok, "OK", "BAD")  
     consumed<-ifelse(ok, nchar(node$val), 0)
     #success :set color to green and redraw
@@ -318,37 +341,72 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
 
   eval.ident<-function(text, forest, id, pos){
     #consider : set color to yellow and redraw
-    update.status( forest,id, status="C")
+    cat("id=",id,"\n")
+    update.status( forest, id, status="C")
     step()
     #answer phase
     node<-forest[[id]]
     # find current expression at position (this woud be in row and col node$coord)
-    current.row<-node$coord['row']
-    current.col<-node$coord['col']
-    # find current rule start pos (assume 1,1)
+    current.node.row<-node$coord['row']
+    current.node.col<-node$coord['col']
+    # find current rule start pos 
+    current.instance.id<-as.character(instance.offset.stack[1,1])
+    current.instance.row<-instance.offset.stack[1,2]
+    current.instance.col<-instance.offset.stack[1,3]
+    
+    # compute starting pos of new call instance
+    call.instance.row<-current.instance.row
+    call.instance.col<-current.instance.col + current.node.col
+    
     # find call.id height (this woud be in  forest[[call.id]]$coord)
     call.symbol<-node$val
     call.instance.id<-get.new.instance(forest, call.symbol)
     call.instance.root.id<-instanceRoot(forest, call.instance.id)
-    dy<-current.row+forest[[call.instance.root.id]]$coord[['h']] 
-    dx<-0 #1 -current.col
-    # find current rule gTree (this would be the root node's value?)
-    # current rule name: split at "-IDENT", take first part, that is the gTree name
-    tr.name<-strsplit(id,"-IDENT-")[[1]][1]
-    # move that rule
-    move.rule.to(tr.name,dy,dx)
-    #drawarrow
+    delta.row<-1+forest[[call.instance.root.id]]$coord[['h']] 
+    
+    #get instance offset of this instance
+#     call.instance.offset<-data.frame(
+#       iid=call.instance.id, 
+#       row=call.instance.row,
+#       col=call.instance.col
+#       )
+    
+    #move the row of everybody (except new.call instance) up by delta.row
+    instance.offset.stack$row<<-instance.offset.stack$row + delta.row  
+    update.instance.offset.stack()
+      
+#add arrow to current instance arrow
     arrow.id<-paste0("arrow-",call.instance.id)
-    len<-dy
-    ga<-g.arrow(dy+1, current.col, arrow.id,  len, txt=call.symbol)
-    grid.draw(ga)
+    len<-delta.row
+    ga<-g.arrow(current.node.row, 
+                current.node.col, 
+                arrow.id,  delta.row, txt=call.symbol)
+    grid.add(gPath(current.instance.id), ga )
+
+# #drawarrow
+# arrow.id<-paste0("arrow-",call.instance.id)
+# len<-delta.row
+# ga<-g.arrow(call.instance.row + delta.row, 
+#             call.instance.col-1, 
+#             arrow.id,  delta.row, txt=call.symbol)
+# grid.draw(ga)
+
+
     # display call rule
-    rule.grob<-create.rule.grob(call.instance.id, forest)
+    #first creat at the correct location
+    rule.grob<-create.rule.grob(call.instance.id, forest, call.instance.row, call.instance.col)
+    #add location to instance.offset (via push.instance)
+    
+    push.instance(call.instance.id, call.instance.row,call.instance.col )
+    
+    #push.instance(call.instance.id, current.row-1, current.col)
     draw.rule.grob(rule.grob)
-    #move it over
-    move.rule.to(call.instance.id, current.row-1, current.col) #don't know why the -1
+    #move it over (or push it and update)
+    
+    #move.rule.to(call.instance.id, current.row-1, current.col) #don't know why the -1
+    
     # call the rule( i.e get it's root and eval it)
-    # 
+    
     step()
     res.call<-eval.forest(text.input,  forest , call.instance.root.id, pos)
     #update arrow status
@@ -357,7 +415,11 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     grid.edit(arrow.id, gp=gpar(fill=arrow.fill), redraw = TRUE)
     step()
     #remove call
-    rec.delete.nodes(call.instance.root.id, forest)    
+    pop.instance() #to get call.instance off of the instance.offset stack
+    rec.delete.nodes(call.instance.root.id, forest)  
+    
+    
+
     # update call box.
     #ok<-res.call$ok
     consumed<-res.call$consumed
@@ -365,13 +427,21 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     consumed<-ifelse(ok, nchar(node$val), 0)
     #success :set color to green and redraw
     update.status( forest, id, status=status)
-    #move rule back
-    
+       
     step()
     #remove arrow 
-    grid.remove(gPath(arrow.id))
+    grid.remove(gPath(current.instance.id,arrow.id))
+    #grid.remove(gPath(arrow.id))
     step()
-    move.rule.to(tr.name,0,0) #kludge for now       
+    
+    #move instance stack back down up by -delta.row
+    instance.offset.stack$row<<-instance.offset.stack$row - delta.row 
+    update.instance.offset.stack()
+    
+    #move.rule.to(tr.name,0,0) #kludge for now 
+    #item<-pop.rule.stack() 
+    #move everybody back
+    
     if(ok){
       text.pos.right(consumed)
     }
@@ -403,6 +473,7 @@ g.drawGridCoord()
 
 rule.id<-root.rule
 rule.instance.id<-get.new.instance(forest, rule.id)
+instance.offset.stack<-data.frame(iid=rule.instance.id, row=0, col=0)
 
 #create grob for this rule instance
 rule.grob<-create.rule.grob(rule.instance.id, forest)
@@ -410,10 +481,10 @@ rule.grob<-create.rule.grob(rule.instance.id, forest)
 draw.rule.grob(rule.grob)
 
 id<-instanceRoot(forest, rule.instance.id)
-eval.forest(text.input,  forest , id) 
-
+res<-eval.forest(text.input,  forest , id)
+status<-ifelse(res$ok,"rule accepted","rule rejected")
+status
 }
-
 
 pardef<-function(parsedRuleDefs, rule.id, rule.def){
   value(pegR[["GSEQ"]](rule.def))->parsed.rule.def
@@ -423,10 +494,18 @@ pardef<-function(parsedRuleDefs, rule.id, rule.def){
 
 test.apply.rule<-function(){
   parsedRuleDefs<-list()
-  parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
-  parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
-  text.input<-"abbb"
+#   parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
+#   parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
+#   rule.id<-"A"
+#   parsedRuleDefs<-pardef(parsedRuleDefs, 'ASTAR', " 'a' (ASTAR / '') ")
+#   
+#   text.input<-"aaabbb"
+#   rule.id<-"ASTAR"
+
+  parsedRuleDefs<-pardef(parsedRuleDefs, 'A', "'c' ('a' / 'b') ")
   rule.id<-"A"
+  text.input<-"cbbb"
+  
   apply_rule(parsedRuleDefs, rule.id, text.input)  
 }
 

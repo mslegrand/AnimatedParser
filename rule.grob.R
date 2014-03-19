@@ -153,7 +153,11 @@ create.rule.grob<-function(rule.id, geom.tree, row=0, col=0){
   #   grid.newpage()
   seekViewport("upper")
  #g.add.GridCoord()
-  rule.grob<-gTree(name=rule.id, vp=viewport(x=.5, y=.5))
+ x<-.5+col2x(col)
+ y<-.5+row2y(row)
+ vp<-viewport(x=x,y=y)
+ 
+  rule.grob<-gTree(name=rule.id, vp=vp)
   rule.grob<-add.OR(rule.id, geom.tree, rule.grob)
   rule.grob<-add.NOT(rule.id, geom.tree, rule.grob)
   rule.grob<-add.AND(rule.id, geom.tree, rule.grob)
