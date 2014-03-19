@@ -16,7 +16,7 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
   get.new.instance<-function(forest, rule.id){
     res<-parsedRuleDefs[[rule.id]]  
     instance.id<-add.geom.tree(forest , res, rule.id)
-    cat("instance.id=", instance.id, "\n")
+    #cat("instance.id=", instance.id, "\n")
     instance.id
   }
   #____________________________________________
@@ -34,6 +34,7 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
       #delete the first row
       rec.delete.nodes(first.id, forest)  #remove the first child    
       node$children<-kids[-1] #take it off the childrens list
+      #cat("dfc> grid.remove(gPath(", node$id, ",", first.id, "))\n")
       grid.remove(gPath(node$id, first.id))
       for(kid.id in node$children){
         vertical.move(kid.id, forest, -fh) 
@@ -42,7 +43,9 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
       if(length(node$children)>1){
         OR.move(node, forest)
       } else {
-        grid.remove(node$id, redraw=TRUE)
+        #grid.remove(node$id, redraw=TRUE)
+        #cat("dfc> edit(",node$id,", gp=gpar(alpha=0)))\n")
+        grid.edit(node$id, gp=gpar(alpha=0))
       }    
       #be happy!!      
     }
@@ -80,14 +83,20 @@ apply_rule<-function(parsedRuleDefs, root.rule, text.input){
   
   #removes this node and all children from both forest and display
   rec.delete.nodes<-function(node.id, forest){ 
+    #cat("rdn> node.id=",node.id,"\n")
     node<-forest[[node.id]]
     children<-node$children
+    #cat("rnd> children=",children,"\n")
     for( kid.id in children){
+      #cat("rdn>kid.id=",kid.id,"\n")
       rec.delete.nodes(kid.id, forest)
     }
     if(class(node) %in% c("ATOM.node", "IDENT.node","NOT.node","AND.node", "QUES.node", "STAR.node", "PLUS.node", "OR.node")
     ){
-      grid.remove(node.id, redraw=TRUE)
+      #cat("rdn>grid.remove(",node.id,")\n")
+      if(!is.null(grid.get(node.id))){
+        grid.remove(node.id, redraw=TRUE)
+      }
     }
     rm(list=node.id, envir=forest)
   }
@@ -216,15 +225,24 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
 #---------------------
 
   #used only by OR.node!!!!
-  delete.remaining.chidren<-function(node, forest){
+  delete.remaining.children<-function(node, forest){
     kids<-node$children
+    #cat("kids:\n")
+    #for(kid in kids){ cat("kid=", kid,", ")}
+    #cat("\n")
     indx<-length(kids)
-    for(i in 2:length(kids)){
+    i<-2
+    while(i<=length(kids)){
       kid.id<-kids[i]
-      rec.delete.nodes(kid.id, forest)
+      rec.delete.nodes(kid.id, forest) 
+      i<-i+1
     }
+        
     node$children<-node$children[1]
+    
     if(!is.null(grid.get(node$id))){
+      #browser(expr=(node$id=="ASTAR-2-GOR-1"))
+      #cat("drc2 > grid.remove(", node$id,")\n")
       grid.remove(node$id, redraw=TRUE)
     }    
     #change the class of the node?
@@ -245,7 +263,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
       ok<-res.kid$ok
       if(ok==T){ #ok==T
         consumed<- res.kid$consumed
-        delete.remaining.chidren(node, forest) #remove all later nodes
+        delete.remaining.children(node, forest) #remove all later nodes
         break
       } else { #ok==F
         if(length(node$children)==1){
@@ -341,7 +359,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
 
   eval.ident<-function(text, forest, id, pos){
     #consider : set color to yellow and redraw
-    cat("id=",id,"\n")
+    #cat("id=",id,"\n")
     update.status( forest, id, status="C")
     step()
     #answer phase
@@ -363,19 +381,12 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     call.instance.id<-get.new.instance(forest, call.symbol)
     call.instance.root.id<-instanceRoot(forest, call.instance.id)
     delta.row<-1+forest[[call.instance.root.id]]$coord[['h']] 
-    
-    #get instance offset of this instance
-#     call.instance.offset<-data.frame(
-#       iid=call.instance.id, 
-#       row=call.instance.row,
-#       col=call.instance.col
-#       )
-    
+        
     #move the row of everybody (except new.call instance) up by delta.row
     instance.offset.stack$row<<-instance.offset.stack$row + delta.row  
     update.instance.offset.stack()
       
-#add arrow to current instance arrow
+    #add arrow to current instance arrow
     arrow.id<-paste0("arrow-",call.instance.id)
     len<-delta.row
     ga<-g.arrow(current.node.row, 
@@ -383,17 +394,8 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
                 arrow.id,  delta.row, txt=call.symbol)
     grid.add(gPath(current.instance.id), ga )
 
-# #drawarrow
-# arrow.id<-paste0("arrow-",call.instance.id)
-# len<-delta.row
-# ga<-g.arrow(call.instance.row + delta.row, 
-#             call.instance.col-1, 
-#             arrow.id,  delta.row, txt=call.symbol)
-# grid.draw(ga)
-
-
     # display call rule
-    #first creat at the correct location
+    #first create at the correct location
     rule.grob<-create.rule.grob(call.instance.id, forest, call.instance.row, call.instance.col)
     #add location to instance.offset (via push.instance)
     
@@ -409,6 +411,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     
     step()
     res.call<-eval.forest(text.input,  forest , call.instance.root.id, pos)
+    
     #update arrow status
     ok<-res.call$ok
     arrow.fill<-ifelse(ok, "greenyellow", "red")
@@ -416,10 +419,12 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
     step()
     #remove call
     pop.instance() #to get call.instance off of the instance.offset stack
+    #cat("rec.delete.nodes(",call.instance.root.id,",forest)\n where forest = ")
+    #cat(ls(forest))
+    #cat("\n")
+    #cat("grid.ls=", grid.ls(),"\n")
     rec.delete.nodes(call.instance.root.id, forest)  
     
-    
-
     # update call box.
     #ok<-res.call$ok
     consumed<-res.call$consumed
@@ -430,7 +435,7 @@ eval.forest<-function(text, forest, id=forest$root.id,  pos=1){
        
     step()
     #remove arrow 
-    grid.remove(gPath(current.instance.id,arrow.id))
+    grid.remove(gPath(current.instance.id, arrow.id))
     #grid.remove(gPath(arrow.id))
     step()
     
@@ -469,7 +474,7 @@ forest<-new.geom.forest()
 drawLower()
 draw.TextPanel(text.input) 
 seekViewport("upper")
-g.drawGridCoord()
+#g.drawGridCoord()
 
 rule.id<-root.rule
 rule.instance.id<-get.new.instance(forest, rule.id)
@@ -497,14 +502,15 @@ test.apply.rule<-function(){
 #   parsedRuleDefs<-pardef(parsedRuleDefs, 'A', " 'a' B ")
 #   parsedRuleDefs<-pardef(parsedRuleDefs, 'B', " 'b' 'b' 'b' ")
 #   rule.id<-"A"
-#   parsedRuleDefs<-pardef(parsedRuleDefs, 'ASTAR', " 'a' (ASTAR / '') ")
-#   
-#   text.input<-"aaabbb"
-#   rule.id<-"ASTAR"
+ # parsedRuleDefs<-pardef(parsedRuleDefs, 'ASTAR', " 'a' (ASTAR / '') ")
+  parsedRuleDefs<-pardef(parsedRuleDefs, 'ASTAR', " 'a' ASTAR / '' ")
 
-  parsedRuleDefs<-pardef(parsedRuleDefs, 'A', "'c' ('a' / 'b') ")
-  rule.id<-"A"
-  text.input<-"cbbb"
+  text.input<-"aaabbb"
+  rule.id<-"ASTAR"
+
+#   parsedRuleDefs<-pardef(parsedRuleDefs, 'A', "'c' ('a' / 'b') ")
+#   rule.id<-"A"
+#   text.input<-"cbbb"
   
   apply_rule(parsedRuleDefs, rule.id, text.input)  
 }
